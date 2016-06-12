@@ -1,6 +1,6 @@
 cd py-back-end
 
-python main
+python main.py
 
 
 in Firefox/Chrome
