@@ -1,78 +1,71 @@
-from indoor import Indoor
-from control import Control
 
-from flask import Flask, request
-from flask import abort
-from flask import redirect
 
-import time
+from flask import Flask
+ 
+from main_test.indoor import Indoor
+from main_test.outdoor import Outdoor
+from main_test.scheduler import Scheduler
+from flask.globals import request
+from main_test.control_state import Control_state
+
+
 
 app = Flask(__name__)
 
-node0 = Indoor()
-print "temperature", node0.get_temperature()
-print "humidity", node0.get_humidity()
-print "radiation", node0.get_radiation()
-print "co2", node0.get_co2()
+node0 =Indoor()
+print ("temperature", node0.temperature)
+print ("humidity", node0.humidity)
+print ("radiation", node0.radiation)
+print ("co2", node0.co2)
 node0.set_temperature(20.0)
 node0.set_humidity(80.0)
 node0.set_radiation(8000)
 node0.set_co2(500)
-print "temperature", node0.get_temperature()
-print "humidity", node0.get_humidity()
-print "radiation", node0.get_radiation()
-print "co2", node0.get_co2()
-c = Control()
+print ("temperature", node0.temperature)
+print ("humidity", node0.humidity)
+print ("radiation", node0.radiation)
+print ("co2", node0.co2)
 
+outdoor=Outdoor()
+control=Control_state()
 
-def get_now_time():
-    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+def get_indoor():
+    print('indoor')
 
-
-print get_now_time()
-
-
+def get_outdoor():
+#     outdoor.getWeatherFromApi()
+    print('outdoor')
+   
+    
 @app.route('/')
 def index():
     return '<h1>Hello World!</h1>'
 
-
 @app.route('/indoor')
-def get_indoor():
-    return '''{"indoor": {"node_0": {"update_time": "%s",
-    "temperature": "%s","relative_humidity": "%s",
-    "radiation": "%s","co2": "%s"}}}''' \
-           % (get_now_time(), node0.get_temperature(), node0.get_humidity(), node0.get_radiation(), node0.get_co2())
+def response_indoor():
+    return node0.classToJson('node0')
+
+@app.route('/outdoor')
+def response_outdoor():
+    return outdoor.classtoJson()
 
 
-@app.route('/control', methods=['GET', 'POST'])
-def control():
-    if request.method == 'POST':
-        pass
+@app.route('/control',methods=['GET', 'POST'])
+def get_controlstate():
+    if request.methods =='POST':
+        return request.json()
     else:
-        return '''{
-        "actuator": {
-        "update_time":"%s",
-        "tri_state": {"roof_vent_south": "%s",
-            "roof_vent_north": "%s",
-            "side_vent": "%s","shade_screen_out": "%s",
-            "shade_screen_in": "%s","thermal_screen": "%s"},
-        "bi_state": {
-            "cooling_pad": "%s","fogging": "%s",
-            "heating": "%s","co2": "%s",
-            "lighting_1": "%s","lighting_2": "%s",
-            "irrigation": "%s"}}}''' \
-               % (get_now_time(), c.get_roof_vent_south(), c.get_roof_vent_north(),
-                  c.get_side_vent(), c.get_shade_screen_out(), c.get_shade_screen_in(),
-                  c.get_thermal_screen(), c.get_cooling_pad(), c.get_fogging(), c.get_heating(),
-                  c.get_co2(), c.get_lighting_1(), c.get_lighting_2(), c.get_irrigation())
-
+        return control.clssToJson()
 
 @app.route('/hi')
 def change():
     node0.set_temperature(30.0)
     return '<h1>set temp from 20 to 30</h1>'
 
-
 if __name__ == '__main__':
+    scheduler1 = Scheduler(2, get_outdoor)
+    scheduler2 = Scheduler(3, get_indoor)
+    scheduler1.start()
+    scheduler2.start()
     app.run('0.0.0.0', '8020')
+#     scheduler.stop()
